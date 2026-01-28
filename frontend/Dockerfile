@@ -11,6 +11,14 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build argument for API URL
+ARG API_URL=https://exquisite-analysis-production-1b41.up.railway.app/api
+ENV API_URL=$API_URL
+
+# Update environment.ts with API URL at build time
+RUN sed -i "s|apiBaseUrl:.*|apiBaseUrl: '${API_URL}',|g" src/environments/environment.ts && \
+    sed -i "s|production:.*|production: true,|g" src/environments/environment.ts
+
 # Build the application
 RUN npm run build
 

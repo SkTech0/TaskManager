@@ -1,4 +1,4 @@
 export const environment = {
-  production: false,
-  apiBaseUrl: 'http://localhost:5001/api'
+  production: true,
+  apiBaseUrl: 'https://exquisite-analysis-production-1b41.up.railway.app/api'
 };
