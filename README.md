@@ -2,9 +2,7 @@
 
 A full-stack task management system built with .NET 8 and Angular 18.
 
-[![CI](https://github.com/yourusername/TaskManager/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/TaskManager/actions/workflows/ci.yml)
-
-> **Note**: Replace `yourusername` in the badge URL with your actual GitHub username after creating the repository.
+[![CI](https://github.com/SkTech0/TaskManager/actions/workflows/ci.yml/badge.svg)](https://github.com/SkTech0/TaskManager/actions/workflows/ci.yml)
 
 ## Features
 

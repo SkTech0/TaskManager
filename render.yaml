@@ -1,0 +1,43 @@
+services:
+  # PostgreSQL Database
+  - type: pspg
+    name: taskmanager-db
+    plan: free
+    databaseName: taskmanagerdb
+    user: taskuser
+
+  # Backend API
+  - type: web
+    name: taskmanager-api
+    env: docker
+    plan: free
+    dockerfilePath: ./backend/TaskManager.API/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: taskmanager-db
+          property: connectionString
+      - key: Jwt__Issuer
+        value: TaskManager
+      - key: Jwt__Audience
+        value: TaskManagerClient
+      - key: Jwt__SecretKey
+        generateValue: true
+      - key: Jwt__ExpiryMinutes
+        value: 60
+      - key: Auth__PasswordSalt
+        generateValue: true
+
+  # Frontend
+  - type: web
+    name: taskmanager-frontend
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist/taskmanager-frontend/browser
+    envVars:
+      - key: NODE_ENV
+        value: production
