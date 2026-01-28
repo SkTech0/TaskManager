@@ -58,3 +58,7 @@ coverage/
 *.tmp
 *.temp
 *.cache
+
+# Documentation build artifacts (if any)
+docs/_build/
+docs/.vuepress/dist/

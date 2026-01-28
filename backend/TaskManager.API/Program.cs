@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -48,10 +49,23 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin => true) // Allow any origin
+        // Add specific origins
+        var origins = new List<string> { "https://taskmanager-production-9b1e.up.railway.app", "http://localhost:4200" };
+        
+        // Also check environment variable
+        var envFrontendUrl = builder.Configuration["FrontendUrl"] 
+                          ?? Environment.GetEnvironmentVariable("FrontendUrl");
+        if (!string.IsNullOrEmpty(envFrontendUrl))
+        {
+            origins.AddRange(envFrontendUrl.Split(';', StringSplitOptions.RemoveEmptyEntries));
+        }
+        
+        policy.WithOrigins(origins.Distinct().ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
+        
+        Log.Information("CORS configured with origins: {Origins}", string.Join(", ", origins));
     });
 });
 

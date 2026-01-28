@@ -68,14 +68,16 @@ npm install
 npm start
 ```
 
-## Documentation
+## 📚 Documentation
 
-- **[Quick Start Guide](./docs/QUICKSTART.md)** - Get started quickly
-- **[Requirements](./docs/requirements.md)** - System requirements and dependencies
-- **[Build & Run](./docs/build-run.md)** - Detailed build and run instructions
-- **[API Documentation](./docs/api-docs.md)** - API endpoint reference
-- **[Architecture](./docs/architecture.md)** - System architecture overview
-- **[Database Design](./docs/db-design.md)** - Database schema and design
+All documentation is available in the [`docs/`](./docs/) folder:
+
+- **[Quick Start Guide](./docs/QUICKSTART.md)** - Get started in 5 minutes
+- **[Setup Instructions](./docs/guides/SETUP.md)** - Setup from GitHub
+- **[Deployment Guide](./docs/deployment/DEPLOYMENT.md)** - Deploy to production
+- **[API Documentation](./docs/api-docs.md)** - Complete API reference
+- **[Architecture](./docs/architecture.md)** - System architecture
+- **[Full Documentation Index](./docs/README.md)** - All documentation
 
 ## Project Structure
 
