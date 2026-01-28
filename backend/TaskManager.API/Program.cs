@@ -34,7 +34,11 @@ builder.Host.UseSerilog();
 var frontendUrl = builder.Configuration["FrontendUrl"] 
                ?? Environment.GetEnvironmentVariable("FrontendUrl")
                ?? "http://localhost:4200";
-var allowedOrigins = frontendUrl.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+var allowedOrigins = frontendUrl.Split(';', StringSplitOptions.RemoveEmptyEntries)
+    .Select(url => url.Trim())
+    .Where(url => !string.IsNullOrEmpty(url))
+    .ToList();
 
 // Always allow localhost for development
 if (!allowedOrigins.Contains("http://localhost:4200"))
@@ -49,23 +53,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        // Start with default localhost for development
-        var origins = new List<string> { "http://localhost:4200" };
-        
-        // Add production frontend URL from environment variable
-        var envFrontendUrl = builder.Configuration["FrontendUrl"] 
-                          ?? Environment.GetEnvironmentVariable("FrontendUrl");
-        if (!string.IsNullOrEmpty(envFrontendUrl))
-        {
-            origins.AddRange(envFrontendUrl.Split(';', StringSplitOptions.RemoveEmptyEntries));
-        }
-        
-        policy.WithOrigins(origins.Distinct().ToArray())
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
-        
-        Log.Information("CORS configured with origins: {Origins}", string.Join(", ", origins));
     });
 });
 
