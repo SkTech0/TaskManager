@@ -1,0 +1,64 @@
+# Example docker-compose.yml for GitHub
+# Copy this to docker-compose.yml and update with your secrets
+
+services:
+  taskmanager-db:
+    image: postgres:16-alpine
+    container_name: taskmanager-db
+    environment:
+      POSTGRES_DB: taskmanagerdb
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpassword  # CHANGE THIS
+    ports:
+      - "5432:5432"
+    volumes:
+      - taskmanager-db-data:/var/lib/postgresql/data
+    networks:
+      - taskmanager-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d taskmanagerdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  taskmanager-api:
+    build:
+      context: ../backend
+      dockerfile: TaskManager.API/Dockerfile
+    container_name: taskmanager-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__DefaultConnection: Host=taskmanager-db;Port=5432;Database=taskmanagerdb;Username=taskuser;Password=taskpassword
+      Jwt__Issuer: TaskManager
+      Jwt__Audience: TaskManagerClient
+      Jwt__SecretKey: "REPLACE_WITH_SECURE_RANDOM_STRING_32_CHARS_MIN"  # CHANGE THIS
+      Jwt__ExpiryMinutes: 60
+      Auth__PasswordSalt: "REPLACE_WITH_SECURE_RANDOM_STRING"  # CHANGE THIS
+    ports:
+      - "5001:8080"
+    depends_on:
+      taskmanager-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - taskmanager-net
+
+  taskmanager-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: taskmanager-frontend
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "4200:80"
+    depends_on:
+      - taskmanager-api
+    networks:
+      - taskmanager-net
+
+networks:
+  taskmanager-net:
+
+volumes:
+  taskmanager-db-data:
