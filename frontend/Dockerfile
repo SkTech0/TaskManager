@@ -11,11 +11,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build argument for API URL (defaults to localhost for local Docker, override for production)
-ARG API_URL=http://taskmanager-api:8080/api
+# Build argument: use relative /api so browser hits same origin; nginx proxies to taskmanager-api:8080
+ARG API_URL=/api
 ENV API_URL=$API_URL
 
-# Update environment.ts with API URL at build time
+# Update environment.ts with API URL at build time (relative URL for Docker - nginx proxies to backend)
 RUN sed -i "s|apiBaseUrl:.*|apiBaseUrl: '${API_URL}',|g" src/environments/environment.ts && \
     sed -i "s|production:.*|production: true,|g" src/environments/environment.ts
 
@@ -28,9 +28,12 @@ FROM nginx:1.25-alpine
 # Copy built app from build stage (Angular 18 outputs to browser subdirectory)
 COPY --from=build /app/dist/taskmanager-frontend/browser /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Nginx template: __API_BACKEND__ replaced at runtime by API_BACKEND_URL (local: taskmanager-api:8080, prod: Railway URL)
+COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
