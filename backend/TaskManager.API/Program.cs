@@ -88,14 +88,14 @@ builder.Services.AddSwaggerGen(options =>
 var connectionString = configuration.GetConnectionString("DefaultConnection");
 
 // If connection string is empty, try to build from individual Railway PostgreSQL variables
-if (string.IsNullOrEmpty(connectionString))
+if (string.IsNullOrEmpty(connectionString) || connectionString.Contains("${"))
 {
     // Check for DATABASE_URL first (Railway provides this when services are linked)
     connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
                     ?? Environment.GetEnvironmentVariable("POSTGRES_URL");
     
-    // If still empty, build from individual PG* variables (Railway provides these)
-    if (string.IsNullOrEmpty(connectionString))
+    // If still empty or contains template variables, build from individual PG* variables (Railway provides these)
+    if (string.IsNullOrEmpty(connectionString) || connectionString.Contains("${"))
     {
         var pgHost = Environment.GetEnvironmentVariable("PGHOST");
         var pgPort = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
