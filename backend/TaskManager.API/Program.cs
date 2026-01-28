@@ -51,7 +51,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials()
+              .SetIsOriginAllowed(origin => true); // Allow any origin for now (can restrict later)
     });
 });
 
@@ -304,12 +305,12 @@ _ = Task.Run(async () =>
     }
 });
 
-// Middleware pipeline
+// Middleware pipeline - CORS must be early in pipeline
+app.UseCors("AllowFrontend");
+
 app.UseSerilogRequestLogging();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 
