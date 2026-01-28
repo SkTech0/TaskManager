@@ -69,12 +69,34 @@ Complete step-by-step guide to deploy Task Manager on Railway using Docker.
 - Set **Custom Port**: `8080`
 - Railway will automatically set `PORT=8080` environment variable
 
-### 3.3 Add Environment Variables
+### 3.3 Link Database Service (IMPORTANT!)
+
+**Before setting environment variables**, link the database:
+
+1. In your **API service**, go to **Settings** tab
+2. Scroll to **Service Dependencies** section
+3. Click **"Add Dependency"** or **"Link Service"**
+4. Select your **PostgreSQL database service**
+5. **Save** changes
+
+This creates a network link and Railway automatically provides connection variables.
+
+### 3.4 Add Environment Variables
 
 Go to **Variables** tab and add:
 
+**Option A: Use Railway's Auto-Generated Connection (Recommended)**
+```
+ConnectionStrings__DefaultConnection=${DATABASE_URL}
+```
+
+**Option B: Manual Connection String**
 ```
 ConnectionStrings__DefaultConnection=<paste-postgres-url-from-step-2>
+```
+
+**Other Required Variables:**
+```
 Jwt__SecretKey=<generate-32-char-secret>
 Auth__PasswordSalt=<generate-salt>
 Jwt__Issuer=TaskManager
@@ -88,8 +110,9 @@ FrontendUrl=https://your-frontend-url.up.railway.app
 **How to get values:**
 
 1. **PostgreSQL URL**: 
-   - From Step 2, copy the connection string
-   - Format: `postgresql://user:password@host:port/database`
+   - After linking services, Railway provides `DATABASE_URL` automatically
+   - OR from Step 2, copy the connection string from PostgreSQL service → "Connect" tab
+   - Format: `postgresql://user:password@host:port/database` (code auto-converts this)
 
 2. **Generate Secrets**:
    - Option A: Use Railway's "Generate" button for `Jwt__SecretKey` and `Auth__PasswordSalt`

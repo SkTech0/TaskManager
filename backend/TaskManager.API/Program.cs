@@ -84,10 +84,36 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// DbContext
+// DbContext - Handle Railway's PostgreSQL URL format
+var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+// Convert PostgreSQL URL format (postgresql://user:pass@host:port/db) to Npgsql format
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+{
+    try
+    {
+        var uri = new Uri(connectionString);
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+        var username = uri.UserInfo.Split(':')[0];
+        var password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "";
+        
+        // Build Npgsql connection string
+        connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={Uri.UnescapeDataString(password)}";
+        
+        // Update configuration
+        configuration["ConnectionStrings:DefaultConnection"] = connectionString;
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Failed to parse PostgreSQL URL format, using as-is: {ConnectionString}", connectionString);
+    }
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+    options.UseNpgsql(connectionString);
 });
 
 // Auth configuration

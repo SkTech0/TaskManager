@@ -35,9 +35,28 @@ Railway is the easiest way to deploy your full-stack app.
    - Set **Custom Port** to `8080`
    - Railway will automatically set the `PORT` environment variable
 
-4. **Add Environment Variables**:
+4. **Link Database Service** (IMPORTANT!):
+   - Go to API service → **Settings** → **Service Dependencies**
+   - Click **"Add Dependency"** or **"Link Service"**
+   - Select your **PostgreSQL database service**
+   - **Save** changes
+   - This allows Railway to automatically provide connection variables
+
+5. **Add Environment Variables**:
+   
+   **Connection String** (choose one):
+   - **Option A (Recommended)**: Use Railway's auto-generated variable:
+     ```
+     ConnectionStrings__DefaultConnection=${DATABASE_URL}
+     ```
+   - **Option B**: Manual connection string:
+     ```
+     ConnectionStrings__DefaultConnection=<railway-postgres-url>
+     ```
+     Get from: PostgreSQL service → "Connect" → Copy connection string
+   
+   **Other Required Variables:**
    ```
-   ConnectionStrings__DefaultConnection=<railway-postgres-url>
    Jwt__SecretKey=<generate-32-char-secret>
    Auth__PasswordSalt=<generate-salt>
    Jwt__Issuer=TaskManager
@@ -48,11 +67,12 @@ Railway is the easiest way to deploy your full-stack app.
    FrontendUrl=https://your-frontend-url.up.railway.app
    ```
    
-   **To get PostgreSQL URL**: Click on your PostgreSQL service → "Connect" → Copy the connection string
-   
    **To generate secrets**: Run `./scripts/generate-secrets.sh` or use Railway's "Generate" button
    
-   **Important**: Set `FrontendUrl` to your deployed frontend URL (you'll get this after deploying the frontend) for CORS to work properly.
+   **Important**: 
+   - Link services first (Step 4) to get `DATABASE_URL` automatically
+   - Set `FrontendUrl` after deploying frontend (for CORS)
+   - Code automatically converts PostgreSQL URL format (`postgresql://...`) to Npgsql format
 
 ### Deploy Frontend:
 
