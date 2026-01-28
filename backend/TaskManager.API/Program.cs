@@ -30,14 +30,25 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // CORS - Allow frontend from environment or default to localhost for development
-var frontendUrl = builder.Configuration["FrontendUrl"] ?? "http://localhost:4200";
-var allowedOrigins = frontendUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
+var frontendUrl = builder.Configuration["FrontendUrl"] 
+               ?? Environment.GetEnvironmentVariable("FrontendUrl")
+               ?? "http://localhost:4200";
+var allowedOrigins = frontendUrl.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+// Always allow localhost for development
+if (!allowedOrigins.Contains("http://localhost:4200"))
+{
+    allowedOrigins.Add("http://localhost:4200");
+}
+
+// Log allowed origins for debugging
+Log.Information("CORS allowed origins: {Origins}", string.Join(", ", allowedOrigins));
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
