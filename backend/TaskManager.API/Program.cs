@@ -87,11 +87,29 @@ builder.Services.AddSwaggerGen(options =>
 // DbContext - Handle Railway's PostgreSQL URL format
 var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-// Check if DATABASE_URL is set (Railway provides this)
+// If connection string is empty, try to build from individual Railway PostgreSQL variables
 if (string.IsNullOrEmpty(connectionString))
 {
+    // Check for DATABASE_URL first (Railway provides this when services are linked)
     connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
                     ?? Environment.GetEnvironmentVariable("POSTGRES_URL");
+    
+    // If still empty, build from individual PG* variables (Railway provides these)
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+        var pgPort = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
+        var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+        var pgUser = Environment.GetEnvironmentVariable("PGUSER");
+        var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+        
+        if (!string.IsNullOrEmpty(pgHost) && !string.IsNullOrEmpty(pgDatabase) && 
+            !string.IsNullOrEmpty(pgUser) && !string.IsNullOrEmpty(pgPassword))
+        {
+            connectionString = $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword}";
+            Log.Information("Built connection string from PG* environment variables.");
+        }
+    }
 }
 
 // Convert PostgreSQL URL format (postgresql://user:pass@host:port/db) to Npgsql format
@@ -111,6 +129,7 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
         
         // Update configuration
         configuration["ConnectionStrings:DefaultConnection"] = connectionString;
+        Log.Information("Converted PostgreSQL URL format to Npgsql format.");
     }
     catch (Exception ex)
     {
@@ -121,8 +140,12 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
 // Validate connection string before using it
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    Log.Error("Connection string is empty or null. Please set ConnectionStrings__DefaultConnection or DATABASE_URL environment variable.");
-    throw new InvalidOperationException("Database connection string is not configured. Please set ConnectionStrings__DefaultConnection or DATABASE_URL environment variable.");
+    Log.Error("Connection string is empty or null. Available env vars - PGHOST: {PGHOST}, PGDATABASE: {PGDATABASE}, PGUSER: {PGUSER}, DATABASE_URL: {DATABASE_URL}",
+        Environment.GetEnvironmentVariable("PGHOST"),
+        Environment.GetEnvironmentVariable("PGDATABASE"),
+        Environment.GetEnvironmentVariable("PGUSER"),
+        Environment.GetEnvironmentVariable("DATABASE_URL") != null ? "SET" : "NOT SET");
+    throw new InvalidOperationException("Database connection string is not configured. Please link PostgreSQL service or set ConnectionStrings__DefaultConnection environment variable.");
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
