@@ -223,63 +223,72 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 var app = builder.Build();
 
 // Apply schema and seed data with retry logic (non-blocking)
-_ = Task.Run(async () =>
+// IMPORTANT: only run for local/dev environments to avoid impacting production.
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
 {
-    await Task.Delay(TimeSpan.FromSeconds(2)); // Give app time to start
-    
-    // Re-check connection string from environment (Railway might have linked services)
-    var dbConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
-                         ?? Environment.GetEnvironmentVariable("POSTGRES_URL");
-    
-    if (string.IsNullOrEmpty(dbConnectionString))
+    _ = Task.Run(async () =>
     {
-        var pgHost = Environment.GetEnvironmentVariable("PGHOST");
-        var pgPort = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
-        var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
-        var pgUser = Environment.GetEnvironmentVariable("PGUSER");
-        var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
-        
-        if (!string.IsNullOrEmpty(pgHost) && !string.IsNullOrEmpty(pgDatabase) && 
-            !string.IsNullOrEmpty(pgUser) && !string.IsNullOrEmpty(pgPassword))
+        await Task.Delay(TimeSpan.FromSeconds(2)); // Give app time to start
+
+        // Prefer the same connection string the app is already using (docker-compose sets ConnectionStrings__DefaultConnection).
+        var dbConnectionString =
+            configuration.GetConnectionString("DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+            ?? Environment.GetEnvironmentVariable("POSTGRES_URL");
+
+        if (string.IsNullOrEmpty(dbConnectionString))
         {
-            dbConnectionString = $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword}";
+            var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+            var pgPort = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
+            var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+            var pgUser = Environment.GetEnvironmentVariable("PGUSER");
+            var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+
+            if (!string.IsNullOrEmpty(pgHost) && !string.IsNullOrEmpty(pgDatabase) &&
+                !string.IsNullOrEmpty(pgUser) && !string.IsNullOrEmpty(pgPassword))
+            {
+                dbConnectionString = $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword}";
+            }
         }
-    }
-    
-    // Convert PostgreSQL URL format if needed
-    if (!string.IsNullOrEmpty(dbConnectionString) && dbConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
-    {
-        try
+
+        // Convert PostgreSQL URL format if needed
+        if (!string.IsNullOrEmpty(dbConnectionString) &&
+            dbConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
         {
-            var uri = new Uri(dbConnectionString);
-            var host = uri.Host;
-            var dbPort = uri.Port > 0 ? uri.Port : 5432;
-            var database = uri.AbsolutePath.TrimStart('/');
-            var username = uri.UserInfo.Split(':')[0];
-            var password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "";
-            dbConnectionString = $"Host={host};Port={dbPort};Database={database};Username={username};Password={Uri.UnescapeDataString(password)}";
+            try
+            {
+                var uri = new Uri(dbConnectionString);
+                var host = uri.Host;
+                var dbPort = uri.Port > 0 ? uri.Port : 5432;
+                var database = uri.AbsolutePath.TrimStart('/');
+                var username = uri.UserInfo.Split(':')[0];
+                var password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "";
+                dbConnectionString = $"Host={host};Port={dbPort};Database={database};Username={username};Password={Uri.UnescapeDataString(password)}";
+            }
+            catch
+            {
+                // best-effort conversion; use as-is if parsing fails
+            }
         }
-        catch { }
-    }
-    
-    if (string.IsNullOrEmpty(dbConnectionString))
-    {
-        Log.Warning("Database connection string not available. Please link PostgreSQL service in Railway Settings → Service Dependencies.");
-        return;
-    }
-    
-    using (var scope = app.Services.CreateScope())
-    {
+
+        if (string.IsNullOrEmpty(dbConnectionString))
+        {
+            Log.Warning("Database connection string not available for local init/seed.");
+            return;
+        }
+
+        using var scope = app.Services.CreateScope();
         var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<Program>>();
-        
+
         // Create new DbContext with correct connection string
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
         optionsBuilder.UseNpgsql(dbConnectionString);
-        using var dbContext = new ApplicationDbContext(optionsBuilder.Options);
-        
+        await using var dbContext = new ApplicationDbContext(optionsBuilder.Options);
+
         // Retry logic for database connection
-        var maxRetries = 10;
+        const int maxRetries = 10;
         var delay = TimeSpan.FromSeconds(3);
         var retryCount = 0;
         var success = false;
@@ -288,15 +297,17 @@ _ = Task.Run(async () =>
         {
             try
             {
-                dbContext.Database.EnsureCreated();
+                // Use migrations so tables like `users` are created consistently.
+                await dbContext.Database.MigrateAsync();
                 await SeedData.EnsureSeedDataAsync(dbContext, configuration);
                 success = true;
-                logger.LogInformation("Database initialized and seeded successfully.");
+                logger.LogInformation("Database migrated and seeded successfully.");
             }
             catch (Exception ex) when (retryCount < maxRetries - 1)
             {
                 retryCount++;
-                logger.LogWarning("Database connection attempt {RetryCount}/{MaxRetries} failed. Retrying in {Delay}s... Error: {Error}", 
+                logger.LogWarning(
+                    "Database init attempt {RetryCount}/{MaxRetries} failed. Retrying in {Delay}s... Error: {Error}",
                     retryCount, maxRetries, delay.TotalSeconds, ex.Message);
                 await Task.Delay(delay);
             }
@@ -304,10 +315,12 @@ _ = Task.Run(async () =>
 
         if (!success)
         {
-            logger.LogError("Failed to connect to database after {MaxRetries} attempts. Application will continue but database operations may fail.", maxRetries);
+            logger.LogError(
+                "Failed to migrate/seed database after {MaxRetries} attempts. Application will continue but DB operations may fail.",
+                maxRetries);
         }
-    }
-});
+    });
+}
 
 // Middleware pipeline - CORS must be early in pipeline
 app.UseCors("AllowFrontend");
