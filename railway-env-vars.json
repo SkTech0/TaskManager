@@ -1,0 +1,11 @@
+{
+  "ASPNETCORE_ENVIRONMENT": "Production",
+  "ConnectionStrings__DefaultConnection": "${DATABASE_URL}",
+  "Jwt__Issuer": "TaskManager",
+  "Jwt__Audience": "TaskManagerClient",
+  "Jwt__SecretKey": "1n95dj081gam8wv0u0sod3yxo0fg662u",
+  "Jwt__ExpiryMinutes": "60",
+  "Auth__PasswordSalt": "saafom0uz0xvuh8h9vzn742ddlgx3aoa",
+  "PORT": "8080",
+  "FrontendUrl": "${FRONTEND_URL}"
+}

@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -210,13 +211,58 @@ _ = Task.Run(async () =>
 {
     await Task.Delay(TimeSpan.FromSeconds(2)); // Give app time to start
     
+    // Re-check connection string from environment (Railway might have linked services)
+    var dbConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
+                         ?? Environment.GetEnvironmentVariable("POSTGRES_URL");
+    
+    if (string.IsNullOrEmpty(dbConnectionString))
+    {
+        var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+        var pgPort = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
+        var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+        var pgUser = Environment.GetEnvironmentVariable("PGUSER");
+        var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+        
+        if (!string.IsNullOrEmpty(pgHost) && !string.IsNullOrEmpty(pgDatabase) && 
+            !string.IsNullOrEmpty(pgUser) && !string.IsNullOrEmpty(pgPassword))
+        {
+            dbConnectionString = $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword}";
+        }
+    }
+    
+    // Convert PostgreSQL URL format if needed
+    if (!string.IsNullOrEmpty(dbConnectionString) && dbConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            var uri = new Uri(dbConnectionString);
+            var host = uri.Host;
+            var dbPort = uri.Port > 0 ? uri.Port : 5432;
+            var database = uri.AbsolutePath.TrimStart('/');
+            var username = uri.UserInfo.Split(':')[0];
+            var password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "";
+            dbConnectionString = $"Host={host};Port={dbPort};Database={database};Username={username};Password={Uri.UnescapeDataString(password)}";
+        }
+        catch { }
+    }
+    
+    if (string.IsNullOrEmpty(dbConnectionString))
+    {
+        Log.Warning("Database connection string not available. Please link PostgreSQL service in Railway Settings → Service Dependencies.");
+        return;
+    }
+    
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
-        var dbContext = services.GetRequiredService<ApplicationDbContext>();
         var logger = services.GetRequiredService<ILogger<Program>>();
         
-        // Retry logic for database connection (useful when database is still starting)
+        // Create new DbContext with correct connection string
+        var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+        optionsBuilder.UseNpgsql(dbConnectionString);
+        using var dbContext = new ApplicationDbContext(optionsBuilder.Options);
+        
+        // Retry logic for database connection
         var maxRetries = 10;
         var delay = TimeSpan.FromSeconds(3);
         var retryCount = 0;
@@ -226,8 +272,6 @@ _ = Task.Run(async () =>
         {
             try
             {
-                // For this project we use EnsureCreated to create the schema based on the model.
-                // Migrations are not defined, so using Migrate() alone would leave the schema empty.
                 dbContext.Database.EnsureCreated();
                 await SeedData.EnsureSeedDataAsync(dbContext, configuration);
                 success = true;
