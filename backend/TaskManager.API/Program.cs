@@ -94,13 +94,13 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
     {
         var uri = new Uri(connectionString);
         var host = uri.Host;
-        var port = uri.Port > 0 ? uri.Port : 5432;
+        var dbPort = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.TrimStart('/');
         var username = uri.UserInfo.Split(':')[0];
         var password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "";
         
         // Build Npgsql connection string
-        connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={Uri.UnescapeDataString(password)}";
+        connectionString = $"Host={host};Port={dbPort};Database={database};Username={username};Password={Uri.UnescapeDataString(password)}";
         
         // Update configuration
         configuration["ConnectionStrings:DefaultConnection"] = connectionString;
