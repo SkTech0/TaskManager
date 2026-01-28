@@ -14,9 +14,7 @@ RUN dotnet publish TaskManager.API/TaskManager.API.csproj -c Release -o /app/pub
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-# Use PORT environment variable if provided (Railway), otherwise default to 8080
-# Railway provides PORT env var, we'll use it in Program.cs
-ENV ASPNETCORE_URLS=http://+:8080
+# Railway provides PORT env var, Program.cs will use it
 ENV ASPNETCORE_ENVIRONMENT=Docker
 ENV PORT=8080
 
