@@ -11,8 +11,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build argument for API URL
-ARG API_URL=https://exquisite-analysis-production-1b41.up.railway.app/api
+# Build argument for API URL (defaults to localhost for local Docker, override for production)
+ARG API_URL=http://taskmanager-api:8080/api
 ENV API_URL=$API_URL
 
 # Update environment.ts with API URL at build time

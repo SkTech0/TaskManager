@@ -49,10 +49,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        // Add specific origins
-        var origins = new List<string> { "https://taskmanager-production-9b1e.up.railway.app", "http://localhost:4200" };
+        // Start with default localhost for development
+        var origins = new List<string> { "http://localhost:4200" };
         
-        // Also check environment variable
+        // Add production frontend URL from environment variable
         var envFrontendUrl = builder.Configuration["FrontendUrl"] 
                           ?? Environment.GetEnvironmentVariable("FrontendUrl");
         if (!string.IsNullOrEmpty(envFrontendUrl))
