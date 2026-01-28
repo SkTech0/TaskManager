@@ -87,6 +87,13 @@ builder.Services.AddSwaggerGen(options =>
 // DbContext - Handle Railway's PostgreSQL URL format
 var connectionString = configuration.GetConnectionString("DefaultConnection");
 
+// Check if DATABASE_URL is set (Railway provides this)
+if (string.IsNullOrEmpty(connectionString))
+{
+    connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
+                    ?? Environment.GetEnvironmentVariable("POSTGRES_URL");
+}
+
 // Convert PostgreSQL URL format (postgresql://user:pass@host:port/db) to Npgsql format
 if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
 {
@@ -109,6 +116,13 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
     {
         Log.Warning(ex, "Failed to parse PostgreSQL URL format, using as-is: {ConnectionString}", connectionString);
     }
+}
+
+// Validate connection string before using it
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    Log.Error("Connection string is empty or null. Please set ConnectionStrings__DefaultConnection or DATABASE_URL environment variable.");
+    throw new InvalidOperationException("Database connection string is not configured. Please set ConnectionStrings__DefaultConnection or DATABASE_URL environment variable.");
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
