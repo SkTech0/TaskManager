@@ -168,45 +168,49 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
-// Apply schema and seed data with retry logic for Docker startup
-using (var scope = app.Services.CreateScope())
+// Apply schema and seed data with retry logic (non-blocking)
+_ = Task.Run(async () =>
 {
-    var services = scope.ServiceProvider;
-    var dbContext = services.GetRequiredService<ApplicationDbContext>();
-    var logger = services.GetRequiredService<ILogger<Program>>();
+    await Task.Delay(TimeSpan.FromSeconds(2)); // Give app time to start
     
-    // Retry logic for database connection (useful when database is still starting)
-    var maxRetries = 10;
-    var delay = TimeSpan.FromSeconds(3);
-    var retryCount = 0;
-    var success = false;
-
-    while (retryCount < maxRetries && !success)
+    using (var scope = app.Services.CreateScope())
     {
-        try
+        var services = scope.ServiceProvider;
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        
+        // Retry logic for database connection (useful when database is still starting)
+        var maxRetries = 10;
+        var delay = TimeSpan.FromSeconds(3);
+        var retryCount = 0;
+        var success = false;
+
+        while (retryCount < maxRetries && !success)
         {
-            // For this project we use EnsureCreated to create the schema based on the model.
-            // Migrations are not defined, so using Migrate() alone would leave the schema empty.
-            dbContext.Database.EnsureCreated();
-            await SeedData.EnsureSeedDataAsync(dbContext, configuration);
-            success = true;
-            logger.LogInformation("Database initialized and seeded successfully.");
+            try
+            {
+                // For this project we use EnsureCreated to create the schema based on the model.
+                // Migrations are not defined, so using Migrate() alone would leave the schema empty.
+                dbContext.Database.EnsureCreated();
+                await SeedData.EnsureSeedDataAsync(dbContext, configuration);
+                success = true;
+                logger.LogInformation("Database initialized and seeded successfully.");
+            }
+            catch (Exception ex) when (retryCount < maxRetries - 1)
+            {
+                retryCount++;
+                logger.LogWarning("Database connection attempt {RetryCount}/{MaxRetries} failed. Retrying in {Delay}s... Error: {Error}", 
+                    retryCount, maxRetries, delay.TotalSeconds, ex.Message);
+                await Task.Delay(delay);
+            }
         }
-        catch (Exception ex) when (retryCount < maxRetries - 1)
+
+        if (!success)
         {
-            retryCount++;
-            logger.LogWarning("Database connection attempt {RetryCount}/{MaxRetries} failed. Retrying in {Delay}s... Error: {Error}", 
-                retryCount, maxRetries, delay.TotalSeconds, ex.Message);
-            await Task.Delay(delay);
+            logger.LogError("Failed to connect to database after {MaxRetries} attempts. Application will continue but database operations may fail.", maxRetries);
         }
     }
-
-    if (!success)
-    {
-        logger.LogError("Failed to connect to database after {MaxRetries} attempts.", maxRetries);
-        throw new InvalidOperationException("Database connection failed after multiple retries.");
-    }
-}
+});
 
 // Middleware pipeline
 app.UseSerilogRequestLogging();
