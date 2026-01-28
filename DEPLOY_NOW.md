@@ -22,10 +22,13 @@ Railway is the easiest way to deploy your full-stack app.
 2. **Add .NET Service**:
    - Click "New" → "GitHub Repo" → Select `TaskManager`
    - Set **Root Directory**: `backend`
-   - **IMPORTANT**: Railway will detect the Dockerfile automatically
-   - If it doesn't, go to **Settings** → **Build** → Select **Dockerfile** as builder
-   - Set **Dockerfile Path**: `TaskManager.API/Dockerfile`
-   - Set **Port**: `8080` (in Settings → Networking)
+   - **IMPORTANT**: Railway should auto-detect Docker (via `railway.json`)
+   - If not, go to **Settings** → **Build**:
+     - Change **Builder** from `Nixpacks` to `Dockerfile`
+     - Set **Dockerfile Path**: `TaskManager.API/Dockerfile`
+     - Set **Docker Context**: `backend` (or leave empty)
+   - **DO NOT** set Build Command or Start Command (Docker handles this)
+   - Go to **Settings** → **Networking** → Set **Custom Port** to `8080`
 
 3. **Configure Port**:
    - Go to your API service → **Settings** → **Networking**
