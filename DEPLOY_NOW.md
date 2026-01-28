@@ -26,7 +26,12 @@ Railway is the easiest way to deploy your full-stack app.
    - Set **Start Command**: `dotnet TaskManager.API.dll`
    - Set **Port**: `8080`
 
-3. **Add Environment Variables**:
+3. **Configure Port**:
+   - Go to your API service → **Settings** → **Networking**
+   - Set **Custom Port** to `8080`
+   - Railway will automatically set the `PORT` environment variable
+
+4. **Add Environment Variables**:
    ```
    ConnectionStrings__DefaultConnection=<railway-postgres-url>
    Jwt__SecretKey=<generate-32-char-secret>
@@ -35,11 +40,15 @@ Railway is the easiest way to deploy your full-stack app.
    Jwt__Audience=TaskManagerClient
    Jwt__ExpiryMinutes=60
    ASPNETCORE_ENVIRONMENT=Production
+   PORT=8080
+   FrontendUrl=https://your-frontend-url.up.railway.app
    ```
    
    **To get PostgreSQL URL**: Click on your PostgreSQL service → "Connect" → Copy the connection string
    
    **To generate secrets**: Run `./scripts/generate-secrets.sh` or use Railway's "Generate" button
+   
+   **Important**: Set `FrontendUrl` to your deployed frontend URL (you'll get this after deploying the frontend) for CORS to work properly.
 
 ### Deploy Frontend:
 
@@ -62,6 +71,14 @@ Railway is the easiest way to deploy your full-stack app.
 - Backend: `https://your-api-name.up.railway.app`
 - Frontend: `https://your-frontend-name.up.railway.app`
 - API Swagger: `https://your-api-name.up.railway.app/swagger`
+
+### Fixing 502 Errors:
+
+If you get a 502 error:
+1. ✅ Verify **Port 8080** is set in **Settings** → **Networking** → **Custom Port**
+2. ✅ Check that `PORT=8080` is in your environment variables
+3. ✅ Ensure the application is listening on `0.0.0.0:8080` (code already configured)
+4. ✅ Check service logs in Railway dashboard for connection errors
 
 ---
 
