@@ -5,9 +5,12 @@ export interface Task {
   dueDate: string | null;
   status: 'Pending' | 'InProgress' | 'Completed';
   remarks: string | null;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
+  createdOn: string;
+  updatedOn: string;
+  createdByUserId: string;
+  createdByName: string;
+  updatedByUserId: string;
+  updatedByName: string;
 }
 
 export interface TaskCreateRequest {
@@ -24,6 +27,12 @@ export interface TaskUpdateRequest {
   dueDate?: string | null;
   status?: 'Pending' | 'InProgress' | 'Completed';
   remarks?: string;
+}
+
+/** API response shape for search (items + totalCount) */
+export interface TaskSearchApiResult {
+  items: Task[];
+  totalCount: number;
 }
 
 export interface TaskSearchResult {

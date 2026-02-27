@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Task, TaskCreateRequest, TaskUpdateRequest, TaskSearchResult } from '../models/task.model';
+import { map } from 'rxjs/operators';
+import { Task, TaskCreateRequest, TaskUpdateRequest, TaskSearchResult, TaskSearchApiResult } from '../models/task.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -33,9 +34,9 @@ export class TaskService {
   }
 
   search(query: string, status?: string): Observable<TaskSearchResult> {
-    // Backend expects 'q' parameter, not 'query'
-    let params = new HttpParams().set('q', query || '');
-    // Note: Backend doesn't support status filtering yet, so we filter on frontend
-    return this.http.get<TaskSearchResult>(`${this.baseUrl}/search`, { params });
+    const params = new HttpParams().set('q', query || '');
+    return this.http.get<TaskSearchApiResult>(`${this.baseUrl}/search`, { params }).pipe(
+      map((res) => ({ tasks: res.items, totalCount: res.totalCount }))
+    );
   }
 }

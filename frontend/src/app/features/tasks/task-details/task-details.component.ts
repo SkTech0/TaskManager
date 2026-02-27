@@ -44,8 +44,10 @@ import { Task } from '../../../core/models/task.model';
           </div>
 
           <div class="meta">
-            <p><strong>Created:</strong> {{ task.createdAt | date:'short' }}</p>
-            <p><strong>Last Updated:</strong> {{ task.updatedAt | date:'short' }}</p>
+            <p><strong>Created On:</strong> {{ task.createdOn | date:'short' }}</p>
+            <p><strong>Last Updated On:</strong> {{ task.updatedOn | date:'short' }}</p>
+            <p><strong>Created By:</strong> {{ task.createdByName }} (ID: {{ task.createdByUserId }})</p>
+            <p><strong>Last Updated By:</strong> {{ task.updatedByName }} (ID: {{ task.updatedByUserId }})</p>
           </div>
         </div>
 

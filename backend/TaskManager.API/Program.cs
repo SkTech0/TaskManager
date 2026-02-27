@@ -216,8 +216,9 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddHttpContextAccessor();
 
-// Configure port from environment variable (Railway provides PORT)
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+// Configure port: use PORT env (e.g. Railway), or 5001 in Development, else 8080
+var port = Environment.GetEnvironmentVariable("PORT")
+    ?? (builder.Environment.IsDevelopment() ? "5001" : "8080");
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();

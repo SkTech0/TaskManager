@@ -54,6 +54,7 @@ import { Task } from '../../../core/models/task.model';
               Due: {{ task.dueDate | date:'short' }}
             </span>
             <span *ngIf="!task.dueDate" class="no-due-date">No due date</span>
+            <span class="created-by">Created by: {{ task.createdByName }}</span>
           </div>
           <div class="task-actions">
             <a [routerLink]="['/tasks', task.id]" class="btn-link">View</a>
@@ -150,6 +151,12 @@ import { Task } from '../../../core/models/task.model';
       font-size: 0.85rem;
       color: #64748b;
       margin: 0.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .created-by {
+      font-style: italic;
     }
     .task-actions {
       display: flex;
